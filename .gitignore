@@ -16,6 +16,11 @@ test_arabic.pdf
 Attendance_Executive_Summary.pdf
 Attendance_Matrix_Report.xlsx
 
+# Local helper scripts
+run.py
+run_dashboard.bat
+generate_sample_data.py
+
 # Temporary Excel lock files
 ~$*.xlsx
 ~$*.xls

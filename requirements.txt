@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+python-multipart
+pandas
+numpy
+openpyxl
+XlsxWriter
+reportlab
+arabic-reshaper
+python-bidi

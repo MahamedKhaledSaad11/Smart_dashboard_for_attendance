@@ -1,0 +1,1543 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UniAttend AI | منصة متابعة الحضور الأكاديمي</title>
+  
+  <!-- Google Fonts: Tajawal & Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+  
+  <!-- Plotly.js -->
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+
+  <style>
+    :root {
+      --primary: #4F46E5;
+      --primary-hover: #4338CA;
+      --bg: #F8FAFC;
+      --surface: #FFFFFF;
+      --text-main: #0F172A;
+      --text-muted: #64748B;
+      --border: #E2E8F0;
+      --border-hover: #CBD5E1;
+      --success: #10B981;
+      --danger: #EF4444;
+      --warning: #F59E0B;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Tajawal', 'Plus Jakarta Sans', sans-serif;
+      background-color: var(--bg);
+      color: var(--text-main);
+      direction: rtl;
+      text-align: right;
+      line-height: 1.5;
+      min-height: 100vh;
+      display: flex;
+    }
+
+    /* Layout: Sidebar + Main Content */
+    .app-container {
+      display: flex;
+      width: 100%;
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      width: 340px;
+      background-color: var(--surface);
+      border-left: 1.5px solid var(--border);
+      padding: 1.5rem 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+      flex-shrink: 0;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+    }
+
+    .main-content {
+      flex: 1;
+      padding: 2rem 2.5rem;
+      overflow-y: auto;
+      max-width: calc(100vw - 340px);
+    }
+
+    /* Sidebar Headings & Controls */
+    .sidebar-title {
+      font-size: 1.2rem;
+      font-weight: 800;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .section-label {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #334155;
+      margin-bottom: 0.35rem;
+    }
+
+    .section-desc {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-bottom: 0.6rem;
+      line-height: 1.4;
+    }
+
+    .file-dropzone {
+      border: 1.5px dashed var(--border-hover);
+      border-radius: 12px;
+      padding: 1rem 0.75rem;
+      text-align: center;
+      background: #F8FAFC;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .file-dropzone:hover {
+      border-color: var(--primary);
+      background: #EEF2FF;
+      color: var(--primary);
+    }
+
+    .file-input-hidden {
+      display: none;
+    }
+
+    .file-status-badge {
+      font-size: 0.8rem;
+      padding: 0.4rem 0.6rem;
+      border-radius: 8px;
+      margin-top: 0.5rem;
+      display: none;
+      font-weight: 600;
+    }
+
+    .badge-success {
+      background: #DCFCE7;
+      color: #166534;
+      display: block;
+    }
+
+    .badge-error {
+      background: #FEE2E2;
+      color: #991B1B;
+      display: block;
+    }
+
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 0.25rem 0;
+    }
+
+    /* Buttons */
+    .btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1rem;
+      border-radius: 10px;
+      font-family: inherit;
+      font-weight: 700;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border: none;
+      width: 100%;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #FFFFFF;
+      box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.25);
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-hover);
+      transform: translateY(-1px);
+    }
+
+    .btn-secondary {
+      background: #FFFFFF;
+      border: 1.5px solid var(--border-hover);
+      color: #1E293B;
+    }
+
+    .btn-secondary:hover {
+      border-color: #94A3B8;
+      background: #F8FAFC;
+    }
+
+    .btn-danger-outline {
+      background: #FFF1F2;
+      border: 1.5px solid #FECDD3;
+      color: #BE123C;
+      font-size: 0.85rem;
+      padding: 0.6rem;
+    }
+
+    .btn-danger-outline:hover {
+      background: #FFE4E6;
+      border-color: #FDA4AF;
+    }
+
+    /* Hero Banner */
+    .hero-banner {
+      background: linear-gradient(135deg, #1E1B4B 0%, #312E81 50%, #4338CA 100%);
+      padding: 2rem 2.5rem;
+      border-radius: 18px;
+      color: #FFFFFF;
+      margin-bottom: 2rem;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      box-shadow: 0 10px 25px -5px rgba(30, 27, 75, 0.25);
+    }
+
+    .hero-title {
+      font-size: 2rem;
+      font-weight: 800;
+      margin: 0;
+      line-height: 1.3;
+    }
+
+    .hero-subtitle {
+      color: #E0E7FF;
+      margin-top: 0.5rem;
+      font-size: 1.05rem;
+      max-width: 850px;
+      line-height: 1.6;
+    }
+
+    /* Stat Cards */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1.25rem;
+      margin-bottom: 1.75rem;
+    }
+
+    .stat-card {
+      background: #FFFFFF;
+      border-radius: 16px;
+      padding: 1.4rem 1.5rem;
+      border: 1.5px solid var(--border);
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.04);
+      transition: all 0.2s ease;
+    }
+
+    .stat-card:hover {
+      transform: translateY(-2px);
+      border-color: var(--border-hover);
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08);
+    }
+
+    .stat-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.75rem;
+    }
+
+    .stat-label {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #475569;
+    }
+
+    .stat-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.25rem;
+    }
+
+    .stat-value {
+      font-size: 2.1rem;
+      font-weight: 800;
+      color: var(--text-main);
+      line-height: 1.1;
+    }
+
+    .stat-footer {
+      margin-top: 0.6rem;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    /* Glass Container */
+    .glass-container {
+      background: #FFFFFF;
+      border: 1.5px solid var(--border);
+      border-radius: 16px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    }
+
+    /* Tabs Bar */
+    .tabs-bar {
+      display: flex;
+      gap: 8px;
+      background-color: #E2E8F0;
+      padding: 6px;
+      border-radius: 14px;
+      margin-bottom: 1.75rem;
+      overflow-x: auto;
+    }
+
+    .tab-btn {
+      border: none;
+      background: transparent;
+      padding: 10px 20px;
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #475569;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+
+    .tab-btn:hover {
+      color: #1E293B;
+    }
+
+    .tab-btn.active {
+      background: #FFFFFF;
+      color: var(--primary);
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    /* Sub Tabs inside Tab 2 */
+    .sub-tabs-bar {
+      display: flex;
+      gap: 6px;
+      background: #F1F5F9;
+      padding: 4px;
+      border-radius: 10px;
+      margin-bottom: 1rem;
+    }
+
+    .sub-tab-btn {
+      border: none;
+      background: transparent;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: #64748B;
+      cursor: pointer;
+    }
+
+    .sub-tab-btn.active {
+      background: #FFFFFF;
+      color: var(--primary);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+
+    /* Filters Row */
+    .filter-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+
+    .form-label {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #475569;
+    }
+
+    .form-control {
+      padding: 0.65rem 0.9rem;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 0.9rem;
+      background: #FFFFFF;
+      color: var(--text-main);
+      outline: none;
+      transition: border-color 0.2s ease;
+    }
+
+    .form-control:focus {
+      border-color: var(--primary);
+    }
+
+    /* Tables */
+    .table-container {
+      width: 100%;
+      overflow-x: auto;
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      background: #FFFFFF;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: right;
+      font-size: 0.9rem;
+    }
+
+    thead {
+      background: #0F172A;
+      color: #FFFFFF;
+    }
+
+    th {
+      padding: 0.9rem 1rem;
+      font-weight: 700;
+      white-space: nowrap;
+      text-align: center;
+    }
+
+    th:first-child, td:first-child {
+      text-align: right;
+      padding-right: 1.25rem;
+    }
+
+    td {
+      padding: 0.85rem 1rem;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+      text-align: center;
+    }
+
+    tbody tr:nth-child(even) {
+      background: #F8FAFC;
+    }
+
+    tbody tr:hover {
+      background: #EEF2FF;
+    }
+
+    /* Badges */
+    .badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: 0.82rem;
+    }
+
+    .badge-present {
+      background: #DCFCE7;
+      color: #166534;
+    }
+
+    .badge-absent {
+      background: #FEE2E2;
+      color: #991B1B;
+    }
+
+    .badge-exempt {
+      background: #F1F5F9;
+      color: #94A3B8;
+    }
+
+    /* Alerts */
+    .alert {
+      padding: 0.9rem 1.2rem;
+      border-radius: 12px;
+      font-size: 0.92rem;
+      font-weight: 600;
+      margin-bottom: 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    .alert-info {
+      background: #EFF6FF;
+      border: 1px solid #BFDBFE;
+      color: #1D4ED8;
+    }
+
+    .alert-success {
+      background: #ECFDF5;
+      border: 1px solid #A7F3D0;
+      color: #047857;
+    }
+
+    /* Loading Overlay */
+    .loading-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.45);
+      backdrop-filter: blur(4px);
+      z-index: 9999;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 1rem;
+      color: #FFFFFF;
+    }
+
+    .spinner {
+      width: 48px;
+      height: 48px;
+      border: 4px solid rgba(255, 255, 255, 0.25);
+      border-top-color: #FFFFFF;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Responsive */
+    @media (max-width: 960px) {
+      .app-container {
+        flex-direction: column;
+      }
+      .sidebar {
+        width: 100%;
+        height: auto;
+        position: relative;
+        border-left: none;
+        border-bottom: 1.5px solid var(--border);
+      }
+      .main-content {
+        max-width: 100%;
+        padding: 1.5rem 1rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Loading Spinner Overlay -->
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="spinner"></div>
+    <div style="font-weight: 700; font-size: 1.1rem;" id="loadingText">جاري المعالجة...</div>
+  </div>
+
+  <div class="app-container">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="sidebar-title">
+        <span>⚙️</span> إدارة البيانات والملفات
+      </div>
+
+      <!-- 1-Click Demo -->
+      <button class="btn btn-secondary" id="btnLoadDemo" onclick="loadDemoData()">
+        <span>🚀</span> تحميل بيانات تجريبية (Load Demo)
+      </button>
+
+      <div class="divider"></div>
+
+      <!-- 1. Master Roster -->
+      <div>
+        <div class="section-label">1️⃣ القائمة المرجعية (Master Roster)</div>
+        <div class="section-desc">ملف إكسيل يضم جميع الطلاب المسجلين بالـ ID والاسم والمجموعة والسكشن.</div>
+        <div class="file-dropzone" onclick="document.getElementById('masterFileInput').click()">
+          <span id="masterFileLabel">📂 انقر لاختيار ملف الماستر شيت</span>
+        </div>
+        <input type="file" id="masterFileInput" class="file-input-hidden" accept=".xlsx, .xls" onchange="handleMasterFileSelect(this)">
+        <div id="masterStatusBadge" class="file-status-badge"></div>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- 2. Session Files -->
+      <div>
+        <div class="section-label">2️⃣ ملفات الحضور (محاضرات / سكاشن)</div>
+        <div class="section-desc">يمكنك اختيار ملف واحد أو عدة ملفات إكسيل دفعة واحدة.</div>
+        <div class="file-dropzone" onclick="document.getElementById('sessionsFileInput').click()">
+          <span id="sessionsFileLabel">📁 انقر لاختيار كشوف الحضور (متعدد)</span>
+        </div>
+        <input type="file" id="sessionsFileInput" class="file-input-hidden" accept=".xlsx, .xls" multiple onchange="handleSessionsFileSelect(this)">
+        <div id="sessionsStatusBadge" class="file-status-badge"></div>
+      </div>
+
+      <button class="btn btn-primary" id="btnAnalyze" onclick="processUploadedFiles()" style="display: none; margin-top: 0.25rem;">
+        <span>⚡</span> معالجة الملفات المرفوعة
+      </button>
+
+      <div id="sidebarResetContainer" style="display: none; margin-top: auto;">
+        <div class="divider"></div>
+        <button class="btn btn-danger-outline" onclick="resetAllData()">
+          <span>🗑️</span> مسح كل البيانات والبدء من جديد
+        </button>
+      </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="main-content">
+      <!-- Hero Banner -->
+      <div class="hero-banner">
+        <div class="hero-title">🎓 منصة متابعة وتحليل الحضور الأكاديمي</div>
+        <div class="hero-subtitle">
+          نظام مؤتمت للمعيدين وأعضاء هيئة التدريس لقراءة كشوف الإكسيل، كشف حالات الحضور في مواعيد سكاشن بديلة، وتوليد مصفوفة الحضور والتقارير الفورية.
+        </div>
+      </div>
+
+      <!-- EMPTY STATE -->
+      <div id="emptyState" class="glass-container" style="text-align: center; padding: 4rem 2rem;">
+        <div style="font-size: 3.5rem; margin-bottom: 1rem;">📁</div>
+        <h3 style="color: #0F172A; margin-bottom: 0.5rem; font-weight: 800;">لا توجد كشوف حضور مضافة حالياً</h3>
+        <p style="color: #475569; max-width: 520px; margin: 0 auto 1.5rem auto; font-size: 1rem;">
+          ابدأ برفع ملف الماستر شيت وكشوف المحاضرات أو السكاشن من القائمة الجانبية، أو اضغط على <b>تحميل بيانات تجريبية</b> للاطلاع على التحليلات فوراً.
+        </p>
+        <button class="btn btn-primary" style="width: auto; margin: 0 auto; padding: 0.8rem 1.8rem;" onclick="loadDemoData()">
+          <span>🚀</span> تحميل بيانات تجريبية فوراً
+        </button>
+      </div>
+
+      <!-- DASHBOARD WRAPPER -->
+      <div id="dashboardWrapper" style="display: none;">
+        <!-- Navigation Tabs Bar -->
+        <div class="tabs-bar">
+          <button class="tab-btn active" onclick="switchTab('tab1', this)">📊 لوحة التحليل التراكمي الشامل</button>
+          <button class="tab-btn" onclick="switchTab('tab2', this)">⚡ تحليل جلسة واحدة سريعة</button>
+          <button class="tab-btn" onclick="switchTab('tab3', this)">🔄 كشف الحضور في سكشن بديل</button>
+          <button class="tab-btn" onclick="switchTab('tab4', this)">👤 ملف الطالب الشامل</button>
+          <button class="tab-btn" onclick="switchTab('tab5', this)">📥 مركز التصدير المتقدم (Excel & PDF)</button>
+        </div>
+
+        <!-- TAB 1: CUMULATIVE DASHBOARD -->
+        <div id="tab1" class="tab-content active">
+          <!-- 4 KPI Cards -->
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-header">
+                <span class="stat-label">الطلاب المسجلين</span>
+                <div class="stat-icon" style="background: #EEF2FF; color: #4338CA;">👥</div>
+              </div>
+              <div class="stat-value" id="kpiTotalStudents">0</div>
+              <div class="stat-footer">طالب في الماستر شيت</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-header">
+                <span class="stat-label">الجلسات المسجلة</span>
+                <div class="stat-icon" style="background: #ECFDF5; color: #047857;">📅</div>
+              </div>
+              <div class="stat-value" id="kpiTotalSessions">0</div>
+              <div class="stat-footer">محاضرات وسكاشن</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-header">
+                <span class="stat-label">متوسط الحضور العام</span>
+                <div class="stat-icon" style="background: #FEF3C7; color: #B45309;">📈</div>
+              </div>
+              <div class="stat-value" id="kpiOverallRate">0%</div>
+              <div class="stat-footer">عبر كافة الجلسات</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-header">
+                <span class="stat-label">حضور بسكشن بديل</span>
+                <div class="stat-icon" style="background: #F3E8FF; color: #7E22CE;">🔄</div>
+              </div>
+              <div class="stat-value" id="kpiCrossSection" style="color: #7E22CE;">0</div>
+              <div class="stat-footer">طالب بدل موعد سكشنه</div>
+            </div>
+          </div>
+
+          <!-- Charts Row -->
+          <div style="display: grid; grid-template-columns: 3fr 2fr; gap: 1.25rem; margin-bottom: 1.75rem;">
+            <div class="glass-container">
+              <h4 style="margin-bottom: 0.75rem; font-weight: 700;">📉 تطور نسب الحضور مع مرور الأسابيع</h4>
+              <div id="chartSessionTrends" style="height: 320px;"></div>
+            </div>
+            <div class="glass-container">
+              <h4 style="margin-bottom: 0.75rem; font-weight: 700;">👥 مقارنة الحضور حسب السكاشن</h4>
+              <div id="chartSectionComparison" style="height: 320px;"></div>
+            </div>
+          </div>
+
+          <!-- Cumulative Matrix -->
+          <div class="glass-container">
+            <h4 style="margin-bottom: 1rem; font-weight: 700;">📋 مصفوفة الحضور التراكمية الشاملة</h4>
+            
+            <!-- Filters -->
+            <div class="filter-grid">
+              <div class="form-group">
+                <label class="form-label">المجموعة (Group):</label>
+                <select id="filterGroup" class="form-control" onchange="renderMatrixTable()">
+                  <option value="all">الكل (All)</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">السكشن (Section):</label>
+                <select id="filterSection" class="form-control" onchange="renderMatrixTable()">
+                  <option value="all">الكل (All)</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">تصفية بالجلسة:</label>
+                <select id="filterSessionCol" class="form-control" onchange="renderMatrixTable()">
+                  <option value="all">عرض كافة الجلسات</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">🔍 بحث باسم الطالب أو الكود:</label>
+                <input type="text" id="filterSearch" class="form-control" placeholder="اكتب للبحث..." oninput="renderMatrixTable()">
+              </div>
+            </div>
+
+            <div class="table-container" style="max-height: 480px; overflow-y: auto;">
+              <table id="matrixTable">
+                <thead id="matrixTableHead"></thead>
+                <tbody id="matrixTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 2: SINGLE SESSION QUICK VIEW -->
+        <div id="tab2" class="tab-content">
+          <div class="glass-container">
+            <div class="form-group" style="max-width: 450px; margin-bottom: 1.5rem;">
+              <label class="form-label" style="font-size: 1rem;">📌 اختر الجلسة المراد فحصها (محاضرة أو سكشن):</label>
+              <select id="selectSingleSession" class="form-control" onchange="renderSingleSessionView()"></select>
+            </div>
+
+            <!-- Single Session KPIs -->
+            <div class="stats-grid">
+              <div class="stat-card">
+                <div class="stat-header">
+                  <span class="stat-label">عدد الحاضرين</span>
+                  <div class="stat-icon" style="background: #ECFDF5; color: #047857;">✅</div>
+                </div>
+                <div class="stat-value" id="kpiSessionPresent" style="color: #047857;">0</div>
+                <div class="stat-footer" id="kpiSessionPresentFooter">طالب حضر الجلسة</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-header">
+                  <span class="stat-label">عدد الغائبين</span>
+                  <div class="stat-icon" style="background: #FEF2F2; color: #B91C1C;">❌</div>
+                </div>
+                <div class="stat-value" id="kpiSessionAbsent" style="color: #B91C1C;">0</div>
+                <div class="stat-footer" id="kpiSessionAbsentFooter">طالب لم يحضر</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-header">
+                  <span class="stat-label">نسبة الحضور</span>
+                  <div class="stat-icon" style="background: #EEF2FF; color: #4338CA;">📊</div>
+                </div>
+                <div class="stat-value" id="kpiSessionRate" style="color: #4338CA;">0%</div>
+                <div class="stat-footer">نسبة التزام الطلاب في الجلسة</div>
+              </div>
+            </div>
+
+            <!-- Alert if cross section attended -->
+            <div id="alertCrossSectionNotice" class="alert alert-info" style="display: none;"></div>
+
+            <!-- Donut + Sub tabs Row -->
+            <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 1.5rem; align-items: start;">
+              <div class="glass-container" style="padding: 1rem;">
+                <div id="chartSessionDonut" style="height: 280px;"></div>
+              </div>
+
+              <div>
+                <div class="sub-tabs-bar" id="singleSessionSubTabs">
+                  <button class="sub-tab-btn active" onclick="switchSingleSubTab('present', this)" id="btnSubTabPresent">✅ الطلاب الحاضرون</button>
+                  <button class="sub-tab-btn" onclick="switchSingleSubTab('absent', this)" id="btnSubTabAbsent">❌ الطلاب الغائبون</button>
+                  <button class="sub-tab-btn" onclick="switchSingleSubTab('cross', this)" id="btnSubTabCross" style="display: none;">🔄 سكشن بديل</button>
+                </div>
+
+                <div class="table-container" style="max-height: 320px; overflow-y: auto;">
+                  <table id="singleSessionTable">
+                    <thead>
+                      <tr>
+                        <th>كود الطالب</th>
+                        <th>اسم الطالب</th>
+                        <th>المجموعة</th>
+                        <th>السكشن</th>
+                      </tr>
+                    </thead>
+                    <tbody id="singleSessionTableBody"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 3: CROSS-SECTION ATTENDANCE -->
+        <div id="tab3" class="tab-content">
+          <div class="glass-container">
+            <div id="crossSectionEmptyBanner" class="alert alert-success" style="display: none;">
+              🎉 التزم جميع الطلاب بمواعيد سكاشنهم المخصصة ولم يتم رصد حضور في سكاشن بديلة.
+            </div>
+
+            <div id="crossSectionContent" style="display: none;">
+              <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+                <div>
+                  <h4 style="margin-bottom: 0.75rem; font-weight: 700;">📊 توزيع الحضور بالسكاشن البديلة</h4>
+                  <div id="chartCrossSection" style="height: 300px;"></div>
+                </div>
+                <div>
+                  <h4 style="margin-bottom: 0.75rem; font-weight: 700;">📝 قائمة الطلاب الذين حضروا في سكشن بديل:</h4>
+                  <div class="table-container" style="max-height: 320px; overflow-y: auto;">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>كود الطالب</th>
+                          <th>اسم الطالب</th>
+                          <th>السكشن الأصلي</th>
+                          <th>حضر في</th>
+                          <th>الجلسة</th>
+                        </tr>
+                      </thead>
+                      <tbody id="crossSectionTableBody"></tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 4: STUDENT 360 PROFILE -->
+        <div id="tab4" class="tab-content">
+          <div class="glass-container">
+            <div class="form-group" style="max-width: 480px; margin-bottom: 1.5rem;">
+              <label class="form-label" style="font-size: 1rem;">🔍 ابحث عن طالب بالاسم أو الكود:</label>
+              <select id="selectStudent" class="form-control" onchange="renderStudentProfile()"></select>
+            </div>
+
+            <!-- Student 4 Cards -->
+            <div class="stats-grid">
+              <div class="stat-card">
+                <div class="stat-label">الطالب</div>
+                <div style="font-size: 1.25rem; font-weight: 800; margin-top: 0.4rem;" id="stdCardName">-</div>
+                <div class="stat-footer" id="stdCardId">ID: -</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-label">الشعبة / السكشن</div>
+                <div style="font-size: 1.25rem; font-weight: 800; margin-top: 0.4rem;" id="stdCardSection">-</div>
+                <div class="stat-footer" id="stdCardGroup">المجموعة: -</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-label">إجمالي الحضور</div>
+                <div class="stat-value" id="stdCardTotal" style="color: #047857;">0 / 0</div>
+                <div class="stat-footer">جلسات مقررة</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-label">نسبة الحضور</div>
+                <div class="stat-value" id="stdCardRate" style="color: #4338CA;">0%</div>
+                <div class="stat-footer">معدل التزام الطالب</div>
+              </div>
+            </div>
+
+            <div style="margin: 1.25rem 0 0.75rem 0; display: flex; align-items: center; justify-content: space-between;">
+              <h4 style="font-weight: 700;">📅 السجل الأسبوعي المفصل للجلسات المقررة:</h4>
+              <label style="font-size: 0.9rem; font-weight: 600; color: #475569; display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                <input type="checkbox" id="chkShowAllSessions" onchange="renderStudentProfile()">
+                عرض جميع الجلسات (بما فيها سكاشن الدفعة الأخرى)
+              </label>
+            </div>
+
+            <div class="table-container" style="max-height: 380px; overflow-y: auto;">
+              <table>
+                <thead>
+                  <tr>
+                    <th>الجلسة</th>
+                    <th>الحالة</th>
+                  </tr>
+                </thead>
+                <tbody id="studentRecordsTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 5: EXPORTS -->
+        <div id="tab5" class="tab-content">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+            <!-- Excel Export Card -->
+            <div class="glass-container" style="text-align: center; padding: 2.5rem 1.5rem;">
+              <div style="font-size: 3rem; margin-bottom: 0.5rem;">📊</div>
+              <h3 style="font-weight: 800; color: #0F172A; margin-bottom: 0.5rem;">مصفوفة الحضور إكسيل (.xlsx)</h3>
+              <p style="color: #475569; font-size: 0.95rem; max-width: 420px; margin: 0 auto 1.5rem auto;">
+                ملف Excel بتنسيق شرطي ملون (أخضر للحاضرين / أحمر للغائبين) وتنسيق خلايا احترافي معتمد.
+              </p>
+              <button class="btn btn-primary" style="max-width: 320px; margin: 0 auto;" onclick="downloadExcel()">
+                <span>📥</span> تحميل ملف الإكسيل الشامل (.xlsx)
+              </button>
+            </div>
+
+            <!-- PDF Export Card -->
+            <div class="glass-container" style="text-align: center; padding: 2.5rem 1.5rem;">
+              <div style="font-size: 3rem; margin-bottom: 0.5rem;">📄</div>
+              <h3 style="font-weight: 800; color: #0F172A; margin-bottom: 0.5rem;">تقرير تنفيذي رسمي (.pdf)</h3>
+              <p style="color: #475569; font-size: 0.95rem; max-width: 420px; margin: 0 auto 1.5rem auto;">
+                تقرير PDF معتمد ومصمم باللغة العربية مع خط تجوال، يضم المؤشرات الرئيسية وكشف الغياب والسكاشن البديلة.
+              </p>
+              <button class="btn btn-primary" style="max-width: 320px; margin: 0 auto;" onclick="downloadPDF()">
+                <span>📥</span> تحميل التقرير التنفيذي (.pdf)
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- APPLICATION JAVASCRIPT -->
+  <script>
+    // Global Application State
+    const state = {
+      masterFile: null,
+      sessionFiles: [],
+      analysisData: null,
+      activeTab: 'tab1',
+      activeTab2Sub: 'present'
+    };
+
+    // UI Feedback Helpers
+    function showLoading(msg = 'جاري المعالجة...') {
+      document.getElementById('loadingText').innerText = msg;
+      document.getElementById('loadingOverlay').style.display = 'flex';
+    }
+
+    function hideLoading() {
+      document.getElementById('loadingOverlay').style.display = 'none';
+    }
+
+    function switchTab(tabId, btn) {
+      state.activeTab = tabId;
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById(tabId).classList.add('active');
+
+      // Resize Plotly charts when switching
+      setTimeout(() => {
+        if (tabId === 'tab1') {
+          Plotly.Plots.resize('chartSessionTrends');
+          Plotly.Plots.resize('chartSectionComparison');
+        } else if (tabId === 'tab2') {
+          Plotly.Plots.resize('chartSessionDonut');
+        } else if (tabId === 'tab3') {
+          const c = document.getElementById('chartCrossSection');
+          if (c && c.style.display !== 'none') Plotly.Plots.resize('chartCrossSection');
+        }
+      }, 50);
+    }
+
+    // 1-Click Load Demo Data
+    async function loadDemoData() {
+      try {
+        showLoading('جاري تحميل وتحليل البيانات التجريبية...');
+        const res = await fetch('/api/demo', { method: 'POST' });
+        const data = await res.json();
+        hideLoading();
+        if (data.status === 'success') {
+          state.analysisData = data;
+          onDataLoaded();
+        } else {
+          alert('حدث خطأ أثناء تحميل البيانات التجريبية: ' + (data.message || ''));
+        }
+      } catch (err) {
+        hideLoading();
+        alert('تعذر الاتصال بالخادم: ' + err.message);
+      }
+    }
+
+    // Master File Select
+    async function handleMasterFileSelect(input) {
+      if (!input.files || input.files.length === 0) return;
+      const file = input.files[0];
+      state.masterFile = file;
+      document.getElementById('masterFileLabel').innerText = '📄 ' + file.name;
+
+      // Check Master via API
+      try {
+        const formData = new FormData();
+        formData.append('master_file', file);
+        const res = await fetch('/api/check-master', { method: 'POST', body: formData });
+        const data = await res.json();
+        const badge = document.getElementById('masterStatusBadge');
+        if (data.status === 'success') {
+          badge.className = 'file-status-badge badge-success';
+          badge.innerText = `✅ تم التحقق: ${data.total_students} طالب`;
+        } else {
+          badge.className = 'file-status-badge badge-error';
+          badge.innerText = `❌ ${data.message}`;
+        }
+        checkAnalyzeButton();
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    // Sessions File Select
+    function handleSessionsFileSelect(input) {
+      if (!input.files || input.files.length === 0) return;
+      state.sessionFiles = Array.from(input.files);
+      document.getElementById('sessionsFileLabel').innerText = `📑 تم اختيار (${state.sessionFiles.length}) ملفات`;
+      const badge = document.getElementById('sessionsStatusBadge');
+      badge.className = 'file-status-badge badge-success';
+      badge.innerText = `جاهز للمعالجة: ${state.sessionFiles.length} كشف`;
+      checkAnalyzeButton();
+    }
+
+    function checkAnalyzeButton() {
+      const btn = document.getElementById('btnAnalyze');
+      if (state.sessionFiles.length > 0) {
+        btn.style.display = 'flex';
+      } else {
+        btn.style.display = 'none';
+      }
+    }
+
+    // Process Uploaded Files
+    async function processUploadedFiles() {
+      if (state.sessionFiles.length === 0) {
+        alert('يرجى اختيار ملفات الحضور أولاً');
+        return;
+      }
+      try {
+        showLoading('جاري معالجة الكشوف ومطابقتها...');
+        const formData = new FormData();
+        if (state.masterFile) {
+          formData.append('master_file', state.masterFile);
+        }
+        for (const f of state.sessionFiles) {
+          formData.append('session_files', f);
+        }
+
+        const res = await fetch('/api/analyze', { method: 'POST', body: formData });
+        const data = await res.json();
+        hideLoading();
+
+        if (data.status === 'success') {
+          state.analysisData = data;
+          onDataLoaded();
+          if (data.errors && data.errors.length > 0) {
+            alert(`تم بنجاح مع بعض الملاحظات:\n` + data.errors.map(e => `${e.filename}: ${e.message}`).join('\n'));
+          }
+        } else {
+          alert('فشلت المعالجة: ' + (data.errors && data.errors.length ? data.errors[0].message : 'تأكد من صيغة الملفات'));
+        }
+      } catch (err) {
+        hideLoading();
+        alert('تعذر الاتصال بالخادم: ' + err.message);
+      }
+    }
+
+    // Reset All Data
+    function resetAllData() {
+      state.masterFile = null;
+      state.sessionFiles = [];
+      state.analysisData = null;
+      document.getElementById('masterFileInput').value = '';
+      document.getElementById('sessionsFileInput').value = '';
+      document.getElementById('masterFileLabel').innerText = '📂 انقر لاختيار ملف الماستر شيت';
+      document.getElementById('sessionsFileLabel').innerText = '📁 انقر لاختيار كشوف الحضور (متعدد)';
+      document.getElementById('masterStatusBadge').style.display = 'none';
+      document.getElementById('sessionsStatusBadge').style.display = 'none';
+      document.getElementById('btnAnalyze').style.display = 'none';
+      document.getElementById('sidebarResetContainer').style.display = 'none';
+      document.getElementById('dashboardWrapper').style.display = 'none';
+      document.getElementById('emptyState').style.display = 'block';
+    }
+
+    // When Data is Loaded -> Populates all views
+    function onDataLoaded() {
+      document.getElementById('emptyState').style.display = 'none';
+      document.getElementById('dashboardWrapper').style.display = 'block';
+      document.getElementById('sidebarResetContainer').style.display = 'block';
+
+      renderTab1();
+      populateSingleSessionOptions();
+      renderTab3CrossSection();
+      populateStudentOptions();
+    }
+
+    // ----------------- TAB 1 RENDERING -----------------
+    function renderTab1() {
+      const cum = state.analysisData.cumulative;
+      const sessions = state.analysisData.sessions || [];
+
+      // KPIs
+      document.getElementById('kpiTotalStudents').innerText = cum.total_students || 0;
+      document.getElementById('kpiTotalSessions').innerText = sessions.length;
+      const rateEl = document.getElementById('kpiOverallRate');
+      const rate = cum.overall_attendance_rate || 0;
+      rateEl.innerText = rate + '%';
+      rateEl.style.color = rate >= 75 ? '#059669' : (rate >= 50 ? '#D97706' : '#DC2626');
+      document.getElementById('kpiCrossSection').innerText = (cum.all_cross_sections || []).length;
+
+      // Plotly Trend Chart
+      const trends = cum.session_trends || [];
+      if (trends.length > 0) {
+        const types = [...new Set(trends.map(t => t.type))];
+        const traces = types.map(tName => {
+          const filtered = trends.filter(t => t.type === tName);
+          const colorMap = { "Lecture": "#4338CA", "Section": "#0284C7", "Session": "#059669" };
+          return {
+            x: filtered.map(f => f.session),
+            y: filtered.map(f => f.attendance_rate),
+            name: tName,
+            type: 'scatter',
+            mode: 'lines+markers',
+            line: { color: colorMap[tName] || '#6366F1', width: 3 },
+            marker: { size: 7 }
+          };
+        });
+
+        Plotly.newPlot('chartSessionTrends', traces, {
+          font: { family: 'Tajawal, sans-serif', color: '#0F172A' },
+          margin: { l: 30, r: 20, t: 30, b: 60 },
+          paper_bgcolor: 'transparent',
+          plot_bgcolor: 'transparent',
+          yaxis: { range: [0, 105], gridcolor: '#E2E8F0' },
+          xaxis: { gridcolor: '#E2E8F0', tickangle: -25 },
+          legend: { orientation: 'h', y: 1.15, x: 1, xanchor: 'right' }
+        }, { responsive: true, displayModeBar: false });
+      }
+
+      // Plotly Section Bar Chart
+      const secStats = cum.section_stats || {};
+      const secKeys = Object.keys(secStats);
+      if (secKeys.length > 0) {
+        const secTrace = {
+          x: secKeys,
+          y: Object.values(secStats),
+          type: 'bar',
+          text: Object.values(secStats).map(v => v + '%'),
+          textposition: 'outside',
+          marker: { color: '#4F46E5', opacity: 0.9 }
+        };
+        Plotly.newPlot('chartSectionComparison', [secTrace], {
+          font: { family: 'Tajawal, sans-serif', color: '#0F172A' },
+          margin: { l: 30, r: 20, t: 30, b: 40 },
+          paper_bgcolor: 'transparent',
+          plot_bgcolor: 'transparent',
+          yaxis: { range: [0, 115], gridcolor: '#E2E8F0' },
+          xaxis: { gridcolor: '#E2E8F0' }
+        }, { responsive: true, displayModeBar: false });
+      }
+
+      // Setup Matrix Filters
+      setupMatrixFilters();
+      renderMatrixTable();
+    }
+
+    function setupMatrixFilters() {
+      const records = state.analysisData.cumulative.matrix_records || [];
+      const sessionNames = state.analysisData.cumulative.session_names || [];
+
+      // Groups
+      const groups = [...new Set(records.map(r => r.group).filter(Boolean))];
+      const grpSelect = document.getElementById('filterGroup');
+      grpSelect.innerHTML = '<option value="all">الكل (All Groups)</option>' +
+        groups.map(g => `<option value="${g}">${g}</option>`).join('');
+
+      // Sections
+      const sections = [...new Set(records.map(r => r.section).filter(Boolean))];
+      const secSelect = document.getElementById('filterSection');
+      secSelect.innerHTML = '<option value="all">الكل (All Sections)</option>' +
+        sections.map(s => `<option value="${s}">${s}</option>`).join('');
+
+      // Session Columns
+      const sSelect = document.getElementById('filterSessionCol');
+      sSelect.innerHTML = '<option value="all">عرض كافة الجلسات</option>' +
+        sessionNames.map(sn => `<option value="${sn}">${sn}</option>`).join('');
+    }
+
+    function renderMatrixTable() {
+      const cum = state.analysisData.cumulative;
+      let records = cum.matrix_records || [];
+      const sessionNames = cum.session_names || [];
+
+      const grpFilter = document.getElementById('filterGroup').value;
+      const secFilter = document.getElementById('filterSection').value;
+      const sessionFilter = document.getElementById('filterSessionCol').value;
+      const search = (document.getElementById('filterSearch').value || '').trim().toLowerCase();
+
+      // Filter rows
+      if (grpFilter !== 'all') {
+        records = records.filter(r => String(r.group) === grpFilter);
+      }
+      if (secFilter !== 'all') {
+        records = records.filter(r => String(r.section) === secFilter);
+      }
+      if (search) {
+        records = records.filter(r =>
+          String(r.student_id || '').toLowerCase().includes(search) ||
+          String(r.student_name || '').toLowerCase().includes(search)
+        );
+      }
+
+      // Determine columns to display
+      let displayedSessions = sessionNames;
+      if (sessionFilter !== 'all') {
+        displayedSessions = [sessionFilter];
+      }
+
+      // Render Header
+      const thead = document.getElementById('matrixTableHead');
+      thead.innerHTML = `
+        <tr>
+          <th>كود الطالب</th>
+          <th>اسم الطالب</th>
+          <th>المجموعة</th>
+          <th>السكشن</th>
+          ${displayedSessions.map(s => `<th>${s}</th>`).join('')}
+          <th>إجمالي الحضور</th>
+          <th>النسبة %</th>
+        </tr>
+      `;
+
+      // Render Body
+      const tbody = document.getElementById('matrixTableBody');
+      if (records.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="${6 + displayedSessions.length}" style="text-align: center; padding: 2rem;">لا توجد نتائج مطابقة للتصفية</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = records.map(r => {
+        const sessionCells = displayedSessions.map(s => {
+          const val = r[s] || '-';
+          let badgeClass = 'badge-exempt';
+          if (val === 'حاضر') badgeClass = 'badge-present';
+          else if (val === 'غائب') badgeClass = 'badge-absent';
+          return `<td><span class="badge ${badgeClass}">${val}</span></td>`;
+        }).join('');
+
+        return `
+          <tr>
+            <td style="font-weight: 700;">${r.student_id || ''}</td>
+            <td>${r.student_name || ''}</td>
+            <td>${r.group || ''}</td>
+            <td>${r.section || ''}</td>
+            ${sessionCells}
+            <td style="font-weight: 700;">${r['إجمالي الحضور'] || 0} / ${r['إجمالي الجلسات'] || 0}</td>
+            <td style="font-weight: 800; color: ${r['نسبة الحضور %'] >= 75 ? '#059669' : (r['نسبة الحضور %'] >= 50 ? '#D97706' : '#DC2626')};">
+              ${r['نسبة الحضور %'] || 0}%
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // ----------------- TAB 2: SINGLE SESSION -----------------
+    function populateSingleSessionOptions() {
+      const sessions = state.analysisData.sessions || [];
+      const sel = document.getElementById('selectSingleSession');
+      sel.innerHTML = sessions.map(s => `<option value="${s.session_name}">${s.session_name}</option>`).join('');
+      if (sessions.length > 0) {
+        renderSingleSessionView();
+      }
+    }
+
+    function renderSingleSessionView() {
+      const sName = document.getElementById('selectSingleSession').value;
+      const sessions = state.analysisData.sessions || [];
+      const sCurr = sessions.find(s => s.session_name === sName);
+      if (!sCurr) return;
+
+      const csList = sCurr.cross_section_students || [];
+      const csCount = csList.length;
+      const isSec = sCurr.metadata && sCurr.metadata.type === 'Section' && sCurr.metadata.section_assigned !== 'General';
+
+      // KPIs
+      document.getElementById('kpiSessionPresent').innerText = sCurr.target_present;
+      document.getElementById('kpiSessionPresentFooter').innerText = (isSec && csCount > 0)
+        ? `${sCurr.target_present} مقيد بالسكشن + ${csCount} سكشن بديل`
+        : 'طالب حضر الجلسة';
+
+      document.getElementById('kpiSessionAbsent').innerText = sCurr.target_absent;
+      document.getElementById('kpiSessionAbsentFooter').innerText = isSec ? 'طالب غائب من السكشن المستهدف' : 'طالب لم يحضر';
+
+      document.getElementById('kpiSessionRate').innerText = sCurr.attendance_rate + '%';
+
+      // Notice alert
+      const alertNotice = document.getElementById('alertCrossSectionNotice');
+      if (isSec && csCount > 0) {
+        alertNotice.style.display = 'flex';
+        alertNotice.innerHTML = `💡 <b>تنبيه:</b> حضر في هذه الجلسة ${csCount} طالب من سكاشن بديلة أخرى، تم توضيحهم في تبويب منفصل أدناه.`;
+      } else {
+        alertNotice.style.display = 'none';
+      }
+
+      // Donut Chart
+      const donutData = [{
+        values: [sCurr.target_present, sCurr.target_absent],
+        labels: ['حاضر', 'غائب'],
+        type: 'pie',
+        hole: 0.6,
+        marker: { colors: ['#10B981', '#EF4444'] },
+        textinfo: 'percent+label',
+        hoverinfo: 'label+value+percent'
+      }];
+      Plotly.newPlot('chartSessionDonut', donutData, {
+        font: { family: 'Tajawal, sans-serif' },
+        margin: { l: 10, r: 10, t: 10, b: 10 },
+        showlegend: false,
+        paper_bgcolor: 'transparent',
+        plot_bgcolor: 'transparent'
+      }, { responsive: true, displayModeBar: false });
+
+      // Sub tabs buttons
+      document.getElementById('btnSubTabPresent').innerText = `✅ الطلاب الحاضرون (${sCurr.target_present})`;
+      document.getElementById('btnSubTabAbsent').innerText = `❌ الطلاب الغائبون (${sCurr.target_absent})`;
+      const btnCross = document.getElementById('btnSubTabCross');
+      if (isSec && csCount > 0) {
+        btnCross.style.display = 'inline-block';
+        btnCross.innerText = `🔄 سكشن بديل (${csCount})`;
+      } else {
+        btnCross.style.display = 'none';
+        if (state.activeTab2Sub === 'cross') state.activeTab2Sub = 'present';
+      }
+
+      renderSingleSessionTable(sCurr);
+    }
+
+    function switchSingleSubTab(type, btn) {
+      state.activeTab2Sub = type;
+      document.querySelectorAll('.sub-tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const sName = document.getElementById('selectSingleSession').value;
+      const sCurr = state.analysisData.sessions.find(s => s.session_name === sName);
+      if (sCurr) renderSingleSessionTable(sCurr);
+    }
+
+    function renderSingleSessionTable(sCurr) {
+      let list = [];
+      if (state.activeTab2Sub === 'present') {
+        list = sCurr.target_present_students || sCurr.present_students || [];
+      } else if (state.activeTab2Sub === 'absent') {
+        list = sCurr.absent_students || [];
+      } else if (state.activeTab2Sub === 'cross') {
+        list = sCurr.cross_section_students || [];
+      }
+
+      const tbody = document.getElementById('singleSessionTableBody');
+      if (list.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 1.5rem;">لا يوجد طلاب في هذه القائمة</td></tr>';
+        return;
+      }
+      tbody.innerHTML = list.map(item => `
+        <tr>
+          <td style="font-weight: 700;">${item.student_id || ''}</td>
+          <td>${item.student_name || ''}</td>
+          <td>${item.group || ''}</td>
+          <td>${item.section || ''}</td>
+        </tr>
+      `).join('');
+    }
+
+    // ----------------- TAB 3: CROSS SECTION -----------------
+    function renderTab3CrossSection() {
+      const crossSections = state.analysisData.cumulative.all_cross_sections || [];
+      const emptyBanner = document.getElementById('crossSectionEmptyBanner');
+      const content = document.getElementById('crossSectionContent');
+
+      if (crossSections.length === 0) {
+        emptyBanner.style.display = 'block';
+        content.style.display = 'none';
+      } else {
+        emptyBanner.style.display = 'none';
+        content.style.display = 'block';
+
+        // Aggregation by attended_section
+        const counts = {};
+        crossSections.forEach(cs => {
+          counts[cs.attended_section] = (counts[cs.attended_section] || 0) + 1;
+        });
+
+        const trace = {
+          x: Object.keys(counts),
+          y: Object.values(counts),
+          type: 'bar',
+          text: Object.values(counts),
+          textposition: 'outside',
+          marker: { color: '#0D9488' }
+        };
+
+        Plotly.newPlot('chartCrossSection', [trace], {
+          font: { family: 'Tajawal, sans-serif' },
+          margin: { l: 25, r: 20, t: 25, b: 35 },
+          paper_bgcolor: 'transparent',
+          plot_bgcolor: 'transparent',
+          yaxis: { gridcolor: '#E2E8F0' },
+          xaxis: { gridcolor: '#E2E8F0' }
+        }, { responsive: true, displayModeBar: false });
+
+        // Table
+        document.getElementById('crossSectionTableBody').innerHTML = crossSections.map(cs => `
+          <tr>
+            <td style="font-weight: 700;">${cs.student_id}</td>
+            <td>${cs.student_name}</td>
+            <td><span class="badge badge-exempt">${cs.assigned_section}</span></td>
+            <td><span class="badge badge-present">${cs.attended_section}</span></td>
+            <td>${cs.session}</td>
+          </tr>
+        `).join('');
+      }
+    }
+
+    // ----------------- TAB 4: STUDENT 360 -----------------
+    function populateStudentOptions() {
+      const records = state.analysisData.cumulative.matrix_records || [];
+      const sel = document.getElementById('selectStudent');
+      sel.innerHTML = records.map(r => `<option value="${r.student_id}">${r.student_id} - ${r.student_name}</option>`).join('');
+      if (records.length > 0) {
+        renderStudentProfile();
+      }
+    }
+
+    function renderStudentProfile() {
+      const sid = document.getElementById('selectStudent').value;
+      const records = state.analysisData.cumulative.matrix_records || [];
+      const std = records.find(r => String(r.student_id) === String(sid));
+      if (!std) return;
+
+      document.getElementById('stdCardName').innerText = std.student_name || 'غير معروف';
+      document.getElementById('stdCardId').innerText = 'ID: ' + std.student_id;
+      document.getElementById('stdCardSection').innerText = std.section || 'General';
+      document.getElementById('stdCardGroup').innerText = 'المجموعة: ' + (std.group || 'General');
+      document.getElementById('stdCardTotal').innerText = `${std['إجمالي الحضور'] || 0} / ${std['إجمالي الجلسات'] || 0}`;
+
+      const rate = std['نسبة الحضور %'] || 0;
+      const rateEl = document.getElementById('stdCardRate');
+      rateEl.innerText = rate + '%';
+      rateEl.style.color = rate >= 75 ? '#059669' : (rate >= 50 ? '#D97706' : '#DC2626');
+
+      const sessionNames = state.analysisData.cumulative.session_names || [];
+      const showAll = document.getElementById('chkShowAllSessions').checked;
+      const tbody = document.getElementById('studentRecordsTableBody');
+
+      const rows = [];
+      sessionNames.forEach(sName => {
+        const val = std[sName] || '-';
+        if (val === '-') {
+          if (showAll) {
+            rows.push(`
+              <tr>
+                <td style="font-weight: 600;">${sName}</td>
+                <td><span class="badge badge-exempt">⚪ غير مطالب (سكشن آخر)</span></td>
+              </tr>
+            `);
+          }
+        } else if (val === 'حاضر') {
+          rows.push(`
+            <tr>
+              <td style="font-weight: 600;">${sName}</td>
+              <td><span class="badge badge-present">✅ حاضر</span></td>
+            </tr>
+          `);
+        } else {
+          rows.push(`
+            <tr>
+              <td style="font-weight: 600;">${sName}</td>
+              <td><span class="badge badge-absent">❌ غائب</span></td>
+            </tr>
+          `);
+        }
+      });
+
+      tbody.innerHTML = rows.join('');
+    }
+
+    // ----------------- TAB 5: EXPORTS -----------------
+    async function downloadExcel() {
+      if (!state.analysisData) return;
+      try {
+        showLoading('جاري إعداد وتحميل ملف الإكسيل...');
+        const payload = {
+          matrix_records: state.analysisData.cumulative.matrix_records,
+          matrix_columns: state.analysisData.cumulative.matrix_columns,
+          session_names: state.analysisData.cumulative.session_names
+        };
+        const res = await fetch('/api/export/excel', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const blob = await res.blob();
+        hideLoading();
+
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'Attendance_Matrix_Report.xlsx';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      } catch (err) {
+        hideLoading();
+        alert('فشل تصدير الإكسيل: ' + err.message);
+      }
+    }
+
+    async function downloadPDF() {
+      if (!state.analysisData) return;
+      try {
+        showLoading('جاري توليد التقرير التنفيذي الرسمي (PDF)...');
+        const payload = {
+          course_title: 'مقرر الفصل الدراسي الحالي',
+          overall_stats: state.analysisData.cumulative,
+          matrix_records: state.analysisData.cumulative.matrix_records,
+          cross_sections: state.analysisData.cumulative.all_cross_sections
+        };
+        const res = await fetch('/api/export/pdf', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const blob = await res.blob();
+        hideLoading();
+
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'Attendance_Executive_Summary.pdf';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      } catch (err) {
+        hideLoading();
+        alert('فشل تصدير التقرير التنفيذي: ' + err.message);
+      }
+    }
+  </script>
+</body>
+</html>

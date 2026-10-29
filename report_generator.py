@@ -10,12 +10,24 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 
-# Register Arabic-capable Unicode TrueType font (Arial or Tahoma)
+# Register Arabic-capable Unicode TrueType font (Tajawal bundled or Windows system fonts)
 FONT_NAME = "Helvetica"
 FONT_BOLD = "Helvetica-Bold"
 
+FONTS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fonts")
+tajawal_reg = os.path.join(FONTS_DIR, "Tajawal-Regular.ttf")
+tajawal_bold = os.path.join(FONTS_DIR, "Tajawal-Bold.ttf")
+
 try:
-    if os.path.exists("C:/Windows/Fonts/arial.ttf"):
+    if os.path.exists(tajawal_reg):
+        pdfmetrics.registerFont(TTFont('ArabicFont', tajawal_reg))
+        if os.path.exists(tajawal_bold):
+            pdfmetrics.registerFont(TTFont('ArabicFont-Bold', tajawal_bold))
+            FONT_BOLD = "ArabicFont-Bold"
+        else:
+            FONT_BOLD = "ArabicFont"
+        FONT_NAME = "ArabicFont"
+    elif os.path.exists("C:/Windows/Fonts/arial.ttf"):
         pdfmetrics.registerFont(TTFont('ArabicFont', 'C:/Windows/Fonts/arial.ttf'))
         if os.path.exists("C:/Windows/Fonts/arialbd.ttf"):
             pdfmetrics.registerFont(TTFont('ArabicFont-Bold', 'C:/Windows/Fonts/arialbd.ttf'))
