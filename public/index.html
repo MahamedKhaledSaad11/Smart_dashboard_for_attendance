@@ -964,13 +964,15 @@
       try {
         showLoading('جاري تحميل وتحليل البيانات التجريبية...');
         const res = await fetch('/api/demo', { method: 'POST' });
-        const data = await res.json();
+        let data = {};
+        try { data = await res.json(); } catch(e) {}
         hideLoading();
-        if (data.status === 'success') {
+        if (res.ok && data.status === 'success') {
           state.analysisData = data;
           onDataLoaded();
         } else {
-          alert('حدث خطأ أثناء تحميل البيانات التجريبية: ' + (data.message || ''));
+          const errMsg = data.message || data.detail || (res.status === 404 ? 'مسار الخدمة غير متوفر (404)' : 'حدث خطأ في الخادم');
+          alert('خطأ أثناء تحميل البيانات: ' + errMsg);
         }
       } catch (err) {
         hideLoading();
@@ -990,18 +992,23 @@
         const formData = new FormData();
         formData.append('master_file', file);
         const res = await fetch('/api/check-master', { method: 'POST', body: formData });
-        const data = await res.json();
+        let data = {};
+        try { data = await res.json(); } catch(e) {}
         const badge = document.getElementById('masterStatusBadge');
-        if (data.status === 'success') {
+        if (res.ok && data.status === 'success') {
           badge.className = 'file-status-badge badge-success';
           badge.innerText = `✅ تم التحقق: ${data.total_students} طالب`;
         } else {
           badge.className = 'file-status-badge badge-error';
-          badge.innerText = `❌ ${data.message}`;
+          const errMsg = data.message || data.detail || (res.status === 404 ? 'مسار الخدمة غير متوفر (404)' : 'فشل قراءة ملف الماستر شيت');
+          badge.innerText = `❌ ${errMsg}`;
         }
         checkAnalyzeButton();
       } catch (e) {
         console.error(e);
+        const badge = document.getElementById('masterStatusBadge');
+        badge.className = 'file-status-badge badge-error';
+        badge.innerText = `❌ تعذر الاتصال بالخادم`;
       }
     }
 
@@ -1042,17 +1049,19 @@
         }
 
         const res = await fetch('/api/analyze', { method: 'POST', body: formData });
-        const data = await res.json();
+        let data = {};
+        try { data = await res.json(); } catch(e) {}
         hideLoading();
 
-        if (data.status === 'success') {
+        if (res.ok && data.status === 'success') {
           state.analysisData = data;
           onDataLoaded();
           if (data.errors && data.errors.length > 0) {
             alert(`تم بنجاح مع بعض الملاحظات:\n` + data.errors.map(e => `${e.filename}: ${e.message}`).join('\n'));
           }
         } else {
-          alert('فشلت المعالجة: ' + (data.errors && data.errors.length ? data.errors[0].message : 'تأكد من صيغة الملفات'));
+          const errMsg = (data.errors && data.errors.length ? data.errors[0].message : null) || data.message || data.detail || (res.status === 404 ? 'مسار الخدمة غير متوفر (404)' : 'تأكد من صيغة الملفات');
+          alert('فشلت المعالجة: ' + errMsg);
         }
       } catch (err) {
         hideLoading();
@@ -1492,6 +1501,16 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
+        if (!res.ok) {
+          let errDetail = 'فشل تصدير الإكسيل';
+          try {
+            const errData = await res.json();
+            errDetail = errData.message || errData.detail || errDetail;
+          } catch(e) {}
+          hideLoading();
+          alert(errDetail);
+          return;
+        }
         const blob = await res.blob();
         hideLoading();
 
@@ -1523,6 +1542,16 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
+        if (!res.ok) {
+          let errDetail = 'فشل تصدير التقرير التنفيذي';
+          try {
+            const errData = await res.json();
+            errDetail = errData.message || errData.detail || errDetail;
+          } catch(e) {}
+          hideLoading();
+          alert(errDetail);
+          return;
+        }
         const blob = await res.blob();
         hideLoading();
 

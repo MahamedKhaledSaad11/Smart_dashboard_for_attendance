@@ -85,10 +85,12 @@ class PDFExportPayload(BaseModel):
     cross_sections: List[Dict[str, Any]] = []
 
 @app.get("/api/health")
+@app.get("/health")
 async def health_check():
     return {"status": "ok", "app": "UniAttend AI", "engine": "FastAPI Stateless"}
 
 @app.post("/api/demo")
+@app.post("/demo")
 async def load_demo_data():
     """Load sample data files bundled with the project."""
     engine = AttendanceEngine()
@@ -121,6 +123,7 @@ async def load_demo_data():
     }
 
 @app.post("/api/check-master")
+@app.post("/check-master")
 async def check_master(master_file: UploadFile = File(...)):
     """Validate master roster file and return student count and divisions."""
     try:
@@ -149,6 +152,7 @@ async def check_master(master_file: UploadFile = File(...)):
         }
 
 @app.post("/api/analyze")
+@app.post("/analyze")
 async def analyze_sessions(
     master_file: Optional[UploadFile] = File(None),
     session_files: List[UploadFile] = File(...)
@@ -202,6 +206,7 @@ async def analyze_sessions(
     }
 
 @app.post("/api/export/excel")
+@app.post("/export/excel")
 async def export_excel(payload: ExcelExportPayload):
     """Generate and return styled Excel attendance matrix workbook."""
     try:
@@ -222,6 +227,7 @@ async def export_excel(payload: ExcelExportPayload):
         raise HTTPException(status_code=500, detail=f"Export failed: {str(e)}")
 
 @app.post("/api/export/pdf")
+@app.post("/export/pdf")
 async def export_pdf(payload: PDFExportPayload):
     """Generate and return executive PDF summary report."""
     try:
